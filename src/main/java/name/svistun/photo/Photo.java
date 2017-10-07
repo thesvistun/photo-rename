@@ -58,7 +58,7 @@ class Photo {
         if (paramFileFolder.exists()) {
             File[] paramFileFolderFiles = paramFileFolder.listFiles();
             if (null == paramFileFolderFiles) {
-                throw new IOException(String.format("Dir %s returned null at getting list of its files.", paramFileFolder.getName()));
+                throw new IOException(String.format("Directory %s returned null at getting list of its files.", paramFileFolder.getName()));
             } else {
                 for (File _paramsFile : paramFileFolderFiles) {
                     Matcher matcherPhoto = patternPhotoFile.matcher(photoFile.getName());
@@ -85,50 +85,45 @@ class Photo {
             }
         }
         if (null == date) {
-            System.err.println(String.format("File [%s] does not have EXIF of origin date", photoFile.getAbsoluteFile()));
+            System.err.println(String.format("File [%s] does not have origin date in EXIF", photoFile.getAbsoluteFile()));
             return false;
         }
-        Matcher matcherPhoto = patternPhotoFile.matcher(photoFile.getName());
-        if (matcherPhoto.matches()) {
-            File newPhotoFile = new File(photoFile.getParent() + File.separator + sdf.format(date) + matcherPhoto.group(2));
-            if (photoFile.getName().equals(newPhotoFile.getName())) {
-                System.out.println(String.format("File [%s] already has properly name.", photoFile.getAbsoluteFile()));
+        return  check(photoFile, patternPhotoFile, date, sdf) && (null == paramsFile || check(paramsFile, patternParamsFile, date, sdf)) &&
+                    rename(photoFile, patternPhotoFile, dryRun, date, sdf) && (null == paramsFile || rename(paramsFile, patternParamsFile, dryRun, date, sdf));
+    }
+
+    private boolean check(File file, Pattern pattern, Date date, SimpleDateFormat sdf) {
+        Matcher matcher = pattern.matcher(file.getName());
+        if (matcher.matches()) {
+            File newFile = new File(file.getParent() + File.separator + sdf.format(date) + matcher.group(2));
+            if (file.getName().equals(newFile.getName())) {
+                System.out.println(String.format("File [%s] already has properly name.", file.getAbsoluteFile()));
                 return false;
             }
-            if (newPhotoFile.exists()) {
-                System.err.println(String.format("Photo file [%s] already exists.", photoFile.getAbsoluteFile()));
+            if (newFile.exists()) {
+                System.err.println(String.format("File [%s] already exists.", file.getAbsoluteFile()));
                 return false;
             }
-            if (! dryRun) {
-                if (! photoFile.renameTo(newPhotoFile)) {
-                    System.err.println(String.format("Photo file [%s] was not renamed.", photoFile.getAbsoluteFile()));
-                    return false;
-                }
-            } else if (! photoFile.canWrite() || ! newPhotoFile.getParentFile().canWrite()) {
-                System.err.println(String.format("Photo file [%s] can not be renamed.", photoFile.getAbsoluteFile()));
+            if (! file.canWrite() || ! newFile.getParentFile().canWrite()) {
+                System.err.println(String.format("Access problems. File [%s] can not be renamed.", file.getAbsoluteFile()));
                 return false;
             }
-            System.out.println(String.format("Photo %s -> %s", photoFile.getAbsoluteFile(), newPhotoFile.getName()));
+            return true;
         }
-        if (paramsFile != null) {
-            Matcher matcherParams = patternParamsFile.matcher(paramsFile.getName());
-            if (matcherParams.matches()) {
-                File newParamsFile = new File(paramsFile.getParent() + File.separator + sdf.format(date) + matcherParams.group(2));
-                if (newParamsFile.exists()) {
-                    System.err.println(String.format("Param file [%s] already exists.", paramsFile.getAbsoluteFile()));
+        return false;
+    }
+
+    private boolean rename(File file, Pattern pattern, boolean dryRun, Date date, SimpleDateFormat sdf) {
+        Matcher matcher = pattern.matcher(file.getName());
+        if (matcher.matches()) {
+            File newFile = new File(file.getParent() + File.separator + sdf.format(date) + matcher.group(2));
+            if (! dryRun) {
+                if (! file.renameTo(newFile)) {
+                    System.err.println(String.format("%s -X-> %s", file.getAbsoluteFile(), newFile.getName()));
                     return false;
                 }
-                if (! dryRun) {
-                    if (! paramsFile.renameTo(newParamsFile)) {
-                        System.err.println(String.format("Params file [%s] was not renamed.", paramsFile.getAbsoluteFile()));
-                        return false;
-                    }
-                } else if (! paramsFile.canWrite() || ! newParamsFile.getParentFile().canWrite()) {
-                    System.err.println(String.format("Params file [%s] can not be renamed.", paramsFile.getAbsoluteFile()));
-                    return false;
-                }
-                System.out.println(String.format("Params %s -> %s", paramsFile.getAbsoluteFile(), newParamsFile.getName()));
             }
+            System.out.println(String.format("%s --> %s", file.getAbsoluteFile(), newFile.getName()));
         }
         return true;
     }
