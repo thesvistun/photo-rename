@@ -33,32 +33,16 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.cli.*;
 import org.apache.commons.lang3.StringUtils;
 
 
 public class PhotoRename {
-    private static String dateFormat = "yyyyMMddHHmmss";
-    private static String photoDirPath;
-    private static int maxDepth = -1;
+    private static String dateFormat, extensions;
     private static boolean dryRun;
-    private static String extensions = "jpeg,jpg,nef";
+    private static int maxDepth;
+    private static String[] photoDirPaths;
     private static Pattern photoFilePattern;
-    private static String help = "" +
-            "PhotoRename program is intended to rename photo files as you set " +
-            "with Java date pattern" + System.lineSeparator() +
-            "Usage:" + System.lineSeparator() +
-            "<path> [options]" + System.lineSeparator() +
-            "\t <path>            :    Path where photos to be renamed" + System.lineSeparator() +
-            "Options:" + System.lineSeparator() +
-            "\t -df --date-format :    Java patterned date format which files to be renamed in" + System.lineSeparator() +
-            "\t                        https://docs.oracle.com/javase/8/docs/api/index.html" + System.lineSeparator() +
-            "\t                        default is 'yyyyMMddHHmmss'" + System.lineSeparator() +
-            "\t -md --max-depth   :    Maximum depth of inner folders to scan fo photo files" + System.lineSeparator() +
-            "\t                        default is infinity" + System.lineSeparator() +
-            "\t -dr --dry-run     :    Just output how rename will occur." + System.lineSeparator() +
-            "\t -e --extension    :    Comma separated list of extensions of photos to rename." + System.lineSeparator() +
-            "\t                        default is 'jpeg,jpg,nef'" + System.lineSeparator() +
-            "\t -h --help         :    Print help message";
     private static SimpleDateFormat sdf;
 
     public static void main(String[] args) {
@@ -72,7 +56,7 @@ public class PhotoRename {
         }
         photoFilePattern = Pattern.compile(String.format("(.+?)(\\.(%s))", extsPatternSb));
         try {
-            List<Photo> photos = scanDir(photoDirPath);
+            List<Photo> photos = scanDir();
             for (Photo photo : photos) {
                 try {
                     if (!photo.rename(dryRun, sdf)) {
@@ -92,66 +76,54 @@ public class PhotoRename {
     }
 
     private static void processArgs(String[] args) {
-        for (int i = 0; i < args.length; i++) {
-            switch (args[i]) {
-                case "-df":
-                    i++;
-                    dateFormat = args[i];
-                    break;
-                case "--date-format":
-                    i++;
-                    dateFormat = args[i];
-                    break;
-                case "-e":
-                    i++;
-                    extensions = args[i];
-                    break;
-                case "--extension":
-                    i++;
-                    extensions = args[i];
-                    break;
-                case "-md":
-                    i++;
-                    maxDepth = Integer.parseInt(args[i]);
-                    break;
-                case "--max-depth":
-                    i++;
-                    maxDepth = Integer.parseInt(args[i]);
-                    break;
-                case "-dr":
-                    dryRun = true;
-                    break;
-                case "--dry-run":
-                    dryRun = true;
-                    break;
-                case "-h":
-                    System.out.println(help);
-                    System.exit(0);
-                case "--help":
-                    System.out.println(help);
-                    System.exit(0);
-                default:
-                    photoDirPath = args[i];
-                    break;
+        Options options = new Options();
+        options.addOption(new Option("df", "date-format", true, "Java patterned date format which files to be renamed in " +
+                "https://docs.oracle.com/javase/8/docs/api/index.html " +
+                "default is 'yyyyMMddHHmmss'"));
+        options.addOption(new Option("dr", "dry-run", false, "Just output how rename will occur"));
+        options.addOption(new Option("e", "extension", true, "Comma separated list of extensions of photos to rename. " +
+                "default is 'jpeg,jpg,nef'"));
+        options.addOption("h", "help", false, "Print help message");
+        options.addOption(new Option("md", "max-depth", true, "Maximum depth of inner folders to scan for photo files " +
+                "default is infinity"));
+        CommandLineParser parser = new DefaultParser();
+        HelpFormatter formatter = new HelpFormatter();
+        formatter.setWidth(83);
+        try {
+            CommandLine cl = parser.parse(options, args);
+            dateFormat = cl.getOptionValue("date-format", "yyyyMMddHHmmss");
+            extensions = cl.getOptionValue("extension", "jpeg,jpg,nef");
+            maxDepth = Integer.parseInt(cl.getOptionValue("max-depth", "-1"));
+            dryRun = cl.hasOption("dry-run");
+            photoDirPaths = cl.getArgs();
+            if (cl.hasOption("help") || photoDirPaths.length == 0) {
+                formatter.printHelp(String.format("java -jar %s.jar [OPTION]... <PATH>...", PhotoRename.class.getSimpleName()), "Options:", options, "");
+                System.exit(cl.hasOption("help") ? 0 : 1);
             }
-        }
-        if (null == photoDirPath) {
-            System.err.println(help);
+        } catch (UnrecognizedOptionException e) {
+            System.err.println(e.getMessage());
+            System.exit(1);
+        } catch (ParseException e) {
+            System.err.println(e.toString() + System.lineSeparator()
+                    + StringUtils.join(e.getStackTrace(), System.lineSeparator()));
             System.exit(1);
         }
         sdf = new SimpleDateFormat(dateFormat);
         sdf.setTimeZone(TimeZone.getTimeZone("GTM"));
-        File photoDir = new File(photoDirPath);
-        if (! photoDir.isDirectory()) {
-            System.err.println(String.format("[%s] is not a directory. Exiting.", photoDirPath));
-            System.exit(1);
+        for (String photoDirPath : photoDirPaths) {
+            if (!new File(photoDirPath).isDirectory()) {
+                System.err.println(String.format("[%s] is not a directory. Exiting.", photoDirPath));
+                System.exit(1);
+            }
         }
     }
 
-    private static List<Photo> scanDir(String photoDirPath) throws IOException {
+    private static List<Photo> scanDir() throws IOException {
         List<Photo> photos = new ArrayList<>();
         List<File> dirs = new ArrayList<>();
-        dirs.add(new File(photoDirPath));
+        for (String photoDirPath : photoDirPaths) {
+            dirs.add(new File(photoDirPath));
+        }
         while (! dirs.isEmpty() && maxDepth != 0) {
             List<File> newDirs = new ArrayList<>();
             for (File dir : dirs) {
