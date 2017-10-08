@@ -46,6 +46,11 @@ public class PhotoRename {
     private static SimpleDateFormat sdf;
 
     public static void main(String[] args) {
+        init(args);
+        execute();
+    }
+
+    private static void init(String[] args){
         processArgs(args);
         StringBuilder extsPatternSb = new StringBuilder();
         for (String extension : extensions.split(",")) {
@@ -55,6 +60,40 @@ public class PhotoRename {
             extsPatternSb.append(String.format("%s|%s", extension, extension.toUpperCase()));
         }
         photoFilePattern = Pattern.compile(String.format("(.+?)(\\.(%s))", extsPatternSb));
+    }
+
+    private static List<Photo> scanDir() throws IOException {
+        List<Photo> photos = new ArrayList<>();
+        List<File> dirs = new ArrayList<>();
+        for (String photoDirPath : photoDirPaths) {
+            dirs.add(new File(photoDirPath));
+        }
+        while (! dirs.isEmpty() && maxDepth != 0) {
+            List<File> newDirs = new ArrayList<>();
+            for (File dir : dirs) {
+                File[] dirFiles = dir.listFiles();
+                if (null == dirFiles) {
+                    System.err.println(String.format("Dir %s returned null at getting list of its files.", dir.getAbsolutePath()));
+                    continue;
+                }
+                for (File file : dirFiles) {
+                    if (file.isDirectory()) {
+                        newDirs.add(file);
+                    } else {
+                        Matcher matcherPhoto = photoFilePattern.matcher(file.getName());
+                        if (matcherPhoto.matches()) {
+                            photos.add(new Photo(file));
+                        }
+                    }
+                }
+            }
+            dirs = newDirs;
+            maxDepth--;
+        }
+        return photos;
+    }
+
+    private static void execute() {
         try {
             List<Photo> photos = scanDir();
             for (Photo photo : photos) {
@@ -116,36 +155,5 @@ public class PhotoRename {
                 System.exit(1);
             }
         }
-    }
-
-    private static List<Photo> scanDir() throws IOException {
-        List<Photo> photos = new ArrayList<>();
-        List<File> dirs = new ArrayList<>();
-        for (String photoDirPath : photoDirPaths) {
-            dirs.add(new File(photoDirPath));
-        }
-        while (! dirs.isEmpty() && maxDepth != 0) {
-            List<File> newDirs = new ArrayList<>();
-            for (File dir : dirs) {
-                File[] dirFiles = dir.listFiles();
-                if (null == dirFiles) {
-                    System.err.println(String.format("Dir %s returned null at getting list of its files.", dir.getAbsolutePath()));
-                    continue;
-                }
-                for (File file : dirFiles) {
-                    if (file.isDirectory()) {
-                        newDirs.add(file);
-                    } else {
-                        Matcher matcherPhoto = photoFilePattern.matcher(file.getName());
-                        if (matcherPhoto.matches()) {
-                            photos.add(new Photo(file));
-                        }
-                    }
-                }
-            }
-            dirs = newDirs;
-            maxDepth--;
-        }
-        return photos;
     }
 }
