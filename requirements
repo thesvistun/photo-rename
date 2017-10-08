@@ -1,13 +1,13 @@
-1. The program renames photo files found in a pointed by user folder to its (photo) taking date/time.
+1. The program renames photo files found in a pointed by user folder to its (photo) date taken.
 
-2. User can set date/time pattern to new file name.
+2. User can set new file name date/time pattern.
 
 3. Program renames file found recursively in all found inner directories.
 
 4. User can set max depth for scanning of inner directories.
 
-5. User can set extensions of photo files to rename.
+5. Program renames NEF parameters file as well.
 
-6. Program renames NEF parameters file as well.
+6. Program supports dry run.
 
-7. Program supports dry run.
+7. Program outputs information about its work.

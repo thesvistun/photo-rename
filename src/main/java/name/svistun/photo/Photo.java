@@ -39,63 +39,77 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 class Photo {
+    private Date dateTaken;
     private File photoFile, paramsFile;
-    private Pattern patternPhotoFile, patternParamsFile;
-    private static Map<String, String> paramFileFolderNameMap, paramFileExtMap;
+    private Pattern patternParamsFile;
+    private static Pattern patternPhotoFile;
+    private static Map<String, String> paramFileExtToFolderNameMap;
     static {
-        paramFileExtMap = new HashMap<>();
-        paramFileExtMap.put("nef", "nksc");
-        paramFileFolderNameMap = new HashMap<>();
-        paramFileFolderNameMap.put("nef", "NKSC_PARAM");
+        paramFileExtToFolderNameMap = new HashMap<>();
+        paramFileExtToFolderNameMap.put("nksc", "NKSC_PARAM");
+        patternPhotoFile = Pattern.compile("(.+)(\\.(.+))");
     }
 
-    Photo(File photoFile) throws IOException {
+    Photo(File photoFile) throws IOException, ImageProcessingException {
         this.photoFile = photoFile;
-        String photoFileExt = photoFile.getName().substring(photoFile.getName().lastIndexOf(".") + 1);
-        patternPhotoFile = Pattern.compile(String.format("(.+?)(\\.(%s))", photoFileExt));
-        patternParamsFile = Pattern.compile(String.format("(.+?)((\\.(%s))?\\.(%s|%s))", photoFileExt, paramFileExtMap.get(photoFileExt.toLowerCase()), null == paramFileExtMap.get(photoFileExt.toLowerCase()) ? null : paramFileExtMap.get(photoFileExt.toLowerCase()).toUpperCase()));
-        File paramFileFolder = new File(photoFile.getParent() + File.separator + paramFileFolderNameMap.get(photoFileExt.toLowerCase()));
-        if (paramFileFolder.exists()) {
-            File[] paramFileFolderFiles = paramFileFolder.listFiles();
-            if (null == paramFileFolderFiles) {
-                throw new IOException(String.format("Directory %s returned null at getting list of its files.", paramFileFolder.getName()));
-            } else {
-                for (File _paramsFile : paramFileFolderFiles) {
-                    Matcher matcherPhoto = patternPhotoFile.matcher(photoFile.getName());
-                    Matcher matcherParams = patternParamsFile.matcher(_paramsFile.getName());
-                    if (matcherParams.matches() && matcherPhoto.matches()) {
-                        if (matcherParams.group(1).equals(matcherPhoto.group(1))) {
-                            paramsFile = _paramsFile;
+        init();
+    }
+
+    boolean rename(boolean dryRun, SimpleDateFormat sdf) throws IOException, ImageProcessingException {
+
+        return  check(photoFile, patternPhotoFile, sdf) && (null == paramsFile || check(paramsFile, patternParamsFile, sdf)) &&
+                    rename(photoFile, patternPhotoFile, dryRun, sdf) && (null == paramsFile || rename(paramsFile, patternParamsFile, dryRun, sdf));
+    }
+
+    private void init() throws IOException, ImageProcessingException {
+        Matcher matcherPhoto = patternPhotoFile.matcher(photoFile.getName());
+        if (matcherPhoto.find()) {
+            String photoFileExt = matcherPhoto.group(3);
+            if (paramFileExtToFolderNameMap.containsKey(photoFileExt.toLowerCase())) {
+                throw new ImageProcessingException("recognized as settings file.");
+            }
+            for (String paramFileExt : paramFileExtToFolderNameMap.keySet()) {
+                File paramFileFolder = new File(photoFile.getParent() + File.separator + paramFileExtToFolderNameMap.get(paramFileExt));
+                if (paramFileFolder.exists()) {
+                    File[] paramsFileFolderFiles = paramFileFolder.listFiles();
+                    if (null == paramsFileFolderFiles) {
+                        throw new IOException(String.format("Directory %s returned null at getting list of its files.", paramFileFolder.getName()));
+                    } else {
+                        Pattern _patternParamsFile = Pattern.compile(String.format("(.+?)((\\.(%s))?\\.(%s|%s))", photoFileExt, paramFileExt, paramFileExt.toUpperCase()));
+                        for (File _paramsFile : paramsFileFolderFiles) {
+                            Matcher matcherParams = _patternParamsFile.matcher(_paramsFile.getName());
+                            if (matcherParams.matches()) {
+                                if (matcherParams.group(1).equals(matcherPhoto.group(1))) {
+                                    paramsFile = _paramsFile;
+                                    patternParamsFile = _patternParamsFile;
+                                    break;
+                                }
+                            }
+                        }
+                        if (paramsFile != null) {
                             break;
                         }
                     }
                 }
             }
         }
-    }
-
-    boolean rename(boolean dryRun, SimpleDateFormat sdf) throws IOException, ImageProcessingException {
         Metadata metadata = ImageMetadataReader.readMetadata(photoFile);
         // obtain the Exif SubIFD directory
-        Date date = null;
         for (ExifSubIFDDirectory directory : metadata.getDirectoriesOfType(ExifSubIFDDirectory.class)) {
-            date = directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
-            if (date != null) {
+            dateTaken = directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
+            if (dateTaken != null) {
                 break;
             }
         }
-        if (null == date) {
-            System.err.println(String.format("File [%s] does not have origin date in EXIF", photoFile.getAbsoluteFile()));
-            return false;
+        if (null == dateTaken) {
+            throw new ImageProcessingException("could not find date taken in EXIF");
         }
-        return  check(photoFile, patternPhotoFile, date, sdf) && (null == paramsFile || check(paramsFile, patternParamsFile, date, sdf)) &&
-                    rename(photoFile, patternPhotoFile, dryRun, date, sdf) && (null == paramsFile || rename(paramsFile, patternParamsFile, dryRun, date, sdf));
     }
 
-    private boolean check(File file, Pattern pattern, Date date, SimpleDateFormat sdf) {
+    private boolean check(File file, Pattern pattern, SimpleDateFormat sdf) {
         Matcher matcher = pattern.matcher(file.getName());
         if (matcher.matches()) {
-            File newFile = new File(file.getParent() + File.separator + sdf.format(date) + matcher.group(2));
+            File newFile = new File(file.getParent() + File.separator + sdf.format(dateTaken) + matcher.group(2));
             if (file.getName().equals(newFile.getName())) {
                 System.out.println(String.format("File [%s] already has properly name.", file.getAbsoluteFile()));
                 return false;
@@ -113,10 +127,10 @@ class Photo {
         return false;
     }
 
-    private boolean rename(File file, Pattern pattern, boolean dryRun, Date date, SimpleDateFormat sdf) {
+    private boolean rename(File file, Pattern pattern, boolean dryRun, SimpleDateFormat sdf) {
         Matcher matcher = pattern.matcher(file.getName());
         if (matcher.matches()) {
-            File newFile = new File(file.getParent() + File.separator + sdf.format(date) + matcher.group(2));
+            File newFile = new File(file.getParent() + File.separator + sdf.format(dateTaken) + matcher.group(2));
             if (! dryRun) {
                 if (! file.renameTo(newFile)) {
                     System.err.println(String.format("%s -X-> %s", file.getAbsoluteFile(), newFile.getName()));

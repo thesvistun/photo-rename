@@ -30,19 +30,16 @@ import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.cli.*;
 import org.apache.commons.lang3.StringUtils;
 
 
 public class PhotoRename {
-    private static String dateFormat, extensions;
+    private static String dateFormat;
     private static boolean dryRun;
     private static int maxDepth;
     private static String[] photoDirPaths;
-    private static Pattern photoFilePattern;
     private static SimpleDateFormat sdf;
 
     public static void main(String[] args) {
@@ -52,14 +49,6 @@ public class PhotoRename {
 
     private static void init(String[] args){
         processArgs(args);
-        StringBuilder extsPatternSb = new StringBuilder();
-        for (String extension : extensions.split(",")) {
-            if (extsPatternSb.length() > 0) {
-                extsPatternSb.append("|");
-            }
-            extsPatternSb.append(String.format("%s|%s", extension, extension.toUpperCase()));
-        }
-        photoFilePattern = Pattern.compile(String.format("(.+?)(\\.(%s))", extsPatternSb));
     }
 
     private static List<Photo> scanDir() throws IOException {
@@ -80,9 +69,10 @@ public class PhotoRename {
                     if (file.isDirectory()) {
                         newDirs.add(file);
                     } else {
-                        Matcher matcherPhoto = photoFilePattern.matcher(file.getName());
-                        if (matcherPhoto.matches()) {
+                        try {
                             photos.add(new Photo(file));
+                        } catch (ImageProcessingException e) {
+                            System.err.println(String.format("File %s, %s", file.getAbsolutePath(), e.getMessage()));
                         }
                     }
                 }
@@ -131,8 +121,6 @@ public class PhotoRename {
                 "https://docs.oracle.com/javase/8/docs/api/index.html " +
                 "default is 'yyyyMMddHHmmss'"));
         options.addOption(new Option("dr", "dry-run", false, "Just output how rename will occur"));
-        options.addOption(new Option("e", "extension", true, "Comma separated list of extensions of photos to rename. " +
-                "default is 'jpeg,jpg,nef'"));
         options.addOption("h", "help", false, "Print help message");
         options.addOption(new Option("md", "max-depth", true, "Maximum depth of inner folders to scan for photo files " +
                 "default is infinity"));
@@ -142,7 +130,6 @@ public class PhotoRename {
         try {
             CommandLine cl = parser.parse(options, args);
             dateFormat = cl.getOptionValue("date-format", "yyyyMMddHHmmss");
-            extensions = cl.getOptionValue("extension", "jpeg,jpg,nef");
             maxDepth = Integer.parseInt(cl.getOptionValue("max-depth", "-1"));
             dryRun = cl.hasOption("dry-run");
             photoDirPaths = cl.getArgs();
