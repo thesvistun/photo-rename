@@ -24,10 +24,7 @@
 
 package name.svistun.photo;
 
-import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
-import com.drew.metadata.Metadata;
-import com.drew.metadata.exif.ExifSubIFDDirectory;
 
 import java.io.File;
 import java.io.IOException;
@@ -93,17 +90,7 @@ class Photo {
                 }
             }
         }
-        Metadata metadata = ImageMetadataReader.readMetadata(photoFile);
-        // obtain the Exif SubIFD directory
-        for (ExifSubIFDDirectory directory : metadata.getDirectoriesOfType(ExifSubIFDDirectory.class)) {
-            dateTaken = directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
-            if (dateTaken != null) {
-                break;
-            }
-        }
-        if (null == dateTaken) {
-            throw new ImageProcessingException("could not find date taken in EXIF");
-        }
+        dateTaken = PhotoUtilities.getDateTaken(photoFile);
     }
 
     private boolean check(File file, Pattern pattern, SimpleDateFormat sdf) {
