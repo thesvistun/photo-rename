@@ -73,6 +73,8 @@ public class PhotoRename {
                             photos.add(new Photo(file));
                         } catch (ImageProcessingException e) {
                             System.err.println(String.format("File %s, %s", file.getAbsolutePath(), e.getMessage()));
+                        } catch (NotImageFileException e) {
+                            System.out.println(String.format("Skip processing file %s as an image, %s", file.getAbsolutePath(), e.getMessage()));
                         }
                     }
                 }

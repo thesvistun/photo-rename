@@ -50,7 +50,7 @@ class Photo {
         patternPhotoFile = Pattern.compile("(.+)(\\.(.+))");
     }
 
-    Photo(File photoFile) throws IOException, ImageProcessingException {
+    Photo(File photoFile) throws IOException, ImageProcessingException, NotImageFileException {
         this.photoFile = photoFile;
         init();
     }
@@ -61,12 +61,12 @@ class Photo {
                     rename(photoFile, patternPhotoFile, dryRun, sdf) && (null == paramsFile || rename(paramsFile, patternParamsFile, dryRun, sdf));
     }
 
-    private void init() throws IOException, ImageProcessingException {
+    private void init() throws IOException, ImageProcessingException, NotImageFileException {
         Matcher matcherPhoto = patternPhotoFile.matcher(photoFile.getName());
         if (matcherPhoto.find()) {
             String photoFileExt = matcherPhoto.group(3);
             if (paramFileExtToFolderNameMap.containsKey(photoFileExt.toLowerCase())) {
-                throw new ImageProcessingException("recognized as settings file.");
+                throw new NotImageFileException("recognized as a settings file.");
             }
             for (String paramFileExt : paramFileExtToFolderNameMap.keySet()) {
                 File paramFileFolder = new File(photoFile.getParent() + File.separator + paramFileExtToFolderNameMap.get(paramFileExt));
