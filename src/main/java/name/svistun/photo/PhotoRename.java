@@ -94,23 +94,34 @@ public class PhotoRename {
     }
 
     private static void execute() {
+        List<Photo> failedPhotos = new ArrayList<>();
         try {
             List<Photo> photos = scanDir();
             for (Photo photo : photos) {
                 try {
                     if (!photo.rename(dryRun, sdf)) {
                         System.err.println(photo + " was not renamed.");
+                        failedPhotos.add(photo);
                     }
                 } catch (IOException | ImageProcessingException ex) {
                     System.err.println(photo + " was not renamed.");
                     System.err.println(ex.toString() + System.lineSeparator()
                             + StringUtils.join(ex.getStackTrace(), System.lineSeparator()));
+                    failedPhotos.add(photo);
                 }
             }
         } catch (IOException ex) {
             System.err.println(ex.toString() + System.lineSeparator()
                     + StringUtils.join(ex.getStackTrace(), System.lineSeparator()));
             System.exit(1);
+        }
+        if (failedPhotos.size() > 0) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("Failed to rename photos:").append(System.lineSeparator());
+            for (Photo failedPhoto : failedPhotos) {
+                sb.append(String.format("\t%s" + System.lineSeparator(), failedPhoto));
+            }
+            System.err.println(sb);
         }
     }
 
