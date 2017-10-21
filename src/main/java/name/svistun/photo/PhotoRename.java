@@ -42,6 +42,10 @@ public class PhotoRename {
     private static String[] photoDirPaths;
     private static SimpleDateFormat sdf;
 
+    static {
+        dateFormat = "yyyyMMdd'at'HHmm''ss";
+    }
+
     public static void main(String[] args) {
         init(args);
         execute();
@@ -119,9 +123,9 @@ public class PhotoRename {
 
     private static void processArgs(String[] args) {
         Options options = new Options();
-        options.addOption(new Option("df", "date-format", true, "Java patterned date format which files to be renamed in " +
+        options.addOption(new Option("df", "date-format", true, String.format("Java patterned date format which files to be renamed in " +
                 "https://docs.oracle.com/javase/8/docs/api/index.html " +
-                "default is 'yyyyMMddHHmmss'"));
+                "default is \"%s\"", dateFormat)));
         options.addOption(new Option("dr", "dry-run", false, "Just output how rename will occur"));
         options.addOption("h", "help", false, "Print help message");
         options.addOption(new Option("md", "max-depth", true, "Maximum depth of inner folders to scan for photo files " +
@@ -131,7 +135,7 @@ public class PhotoRename {
         formatter.setWidth(83);
         try {
             CommandLine cl = parser.parse(options, args);
-            dateFormat = cl.getOptionValue("date-format", "yyyyMMddHHmmss");
+            dateFormat = cl.getOptionValue("date-format", dateFormat);
             maxDepth = Integer.parseInt(cl.getOptionValue("max-depth", "-1"));
             dryRun = cl.hasOption("dry-run");
             photoDirPaths = cl.getArgs();
