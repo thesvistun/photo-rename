@@ -52,7 +52,7 @@ class Photo {
         init();
     }
 
-    boolean rename(boolean dryRun, SimpleDateFormat sdf) throws IOException, ImageProcessingException {
+    boolean rename(boolean dryRun, SimpleDateFormat sdf) {
 
         return  check(photoFile, patternPhotoFile, sdf) && (null == paramsFile || check(paramsFile, patternParamsFile, sdf)) &&
                     rename(photoFile, patternPhotoFile, dryRun, sdf) && (null == paramsFile || rename(paramsFile, patternParamsFile, dryRun, sdf));
@@ -97,13 +97,14 @@ class Photo {
         Matcher matcher = pattern.matcher(file.getName());
         if (matcher.matches()) {
             File newFile = new File(file.getParent() + File.separator + sdf.format(dateTaken) + matcher.group(2));
-            if (file.getName().equals(newFile.getName())) {
-                System.out.println(String.format("File [%s] already has properly name.", file.getAbsoluteFile()));
-                return false;
-            }
-            if (newFile.exists()) {
-                System.err.println(String.format("File [%s] already exists.", file.getAbsoluteFile()));
-                return false;
+            int count = 0;
+            while (newFile.exists()) {
+                if (file.getName().equals(newFile.getName())) {
+                    System.out.println(String.format("File [%s] already has properly name.", file.getAbsoluteFile()));
+                    return false;
+                }
+                count++;
+                newFile = new File(file.getParent() + File.separator + sdf.format(dateTaken) + String.format("_%s", count) + matcher.group(2));
             }
             if (! file.canWrite() || ! newFile.getParentFile().canWrite()) {
                 System.err.println(String.format("Access problems. File [%s] can not be renamed.", file.getAbsoluteFile()));
@@ -118,6 +119,11 @@ class Photo {
         Matcher matcher = pattern.matcher(file.getName());
         if (matcher.matches()) {
             File newFile = new File(file.getParent() + File.separator + sdf.format(dateTaken) + matcher.group(2));
+            int count = 0;
+            while (newFile.exists()) {
+                count++;
+                newFile = new File(file.getParent() + File.separator + sdf.format(dateTaken) + String.format("_%s", count) + matcher.group(2));
+            }
             if (! dryRun) {
                 if (! file.renameTo(newFile)) {
                     System.err.println(String.format("%s -X-> %s", file.getAbsoluteFile(), newFile.getName()));

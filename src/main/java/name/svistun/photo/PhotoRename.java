@@ -94,15 +94,8 @@ public class PhotoRename {
         try {
             List<Photo> photos = scanDir();
             for (Photo photo : photos) {
-                try {
-                    if (!photo.rename(dryRun, sdf)) {
-                        System.err.println(photo + " was not renamed.");
-                        failedPhotos.add(photo);
-                    }
-                } catch (IOException | ImageProcessingException ex) {
+                if (!photo.rename(dryRun, sdf)) {
                     System.err.println(photo + " was not renamed.");
-                    System.err.println(ex.toString() + System.lineSeparator()
-                            + StringUtils.join(ex.getStackTrace(), System.lineSeparator()));
                     failedPhotos.add(photo);
                 }
             }
