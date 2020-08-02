@@ -42,7 +42,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.UnrecognizedOptionException;
 import org.apache.commons.lang3.StringUtils;
 
-public final class PhotoRename {
+public final class Main {
   private static String dateFormat;
   private static boolean dryRun;
   private static int maxDepth;
@@ -54,7 +54,7 @@ public final class PhotoRename {
     dateFormat = "yyyyMMdd'at'HHmm''ss";
   }
 
-  private PhotoRename() {}
+  private Main() {}
 
   public static void main(String[] args) {
     init(args);
@@ -171,8 +171,7 @@ public final class PhotoRename {
       photoDirPaths = cl.getArgs();
       if (cl.hasOption("help") || photoDirPaths.length == 0) {
         formatter.printHelp(String.format(
-            "java -jar %s.jar [OPTION]... <PATH>...",
-            PhotoRename.class.getSimpleName()),
+            "java -jar PhotoRename.jar [OPTION]... <PATH>..."),
             "Options:",
             options,
             "");

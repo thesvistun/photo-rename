@@ -92,7 +92,7 @@
             <manifest>
               <addClasspath>true</addClasspath>
               <classpathPrefix>lib/</classpathPrefix>
-              <mainClass>${project.groupId}.PhotoRename</mainClass>
+              <mainClass>${project.groupId}.Main</mainClass>
             </manifest>
           </archive>
         </configuration>
