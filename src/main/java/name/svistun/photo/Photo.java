@@ -1,7 +1,9 @@
+package name.svistun.photo;
+
 /*
  * MIT License
  *
- * Copyright (c) 2017 Svistunov Aleksey
+ * Copyright (c) 2017 Aleksey Svistunov
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,10 +24,6 @@
  * SOFTWARE.
  */
 
-package name.svistun.photo;
-
-import com.drew.imaging.ImageProcessingException;
-
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -35,109 +33,147 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.drew.imaging.ImageProcessingException;
+
 class Photo {
-    private Date dateTaken;
-    private File photoFile, paramsFile;
-    private Pattern patternParamsFile;
-    private static Pattern patternPhotoFile;
-    private static Map<String, String> paramFileExtToFolderNameMap;
-    static {
-        paramFileExtToFolderNameMap = new HashMap<>();
-        paramFileExtToFolderNameMap.put("nksc", "NKSC_PARAM");
-        patternPhotoFile = Pattern.compile("(.+)(\\.(.+))");
-    }
+  private static Pattern patternPhotoFile;
+  private static Map<String, String> paramFileExtToFolderNameMap;
+  private Date dateTaken;
+  private File photoFile, paramFile;
+  private Pattern patternParamsFile;
 
-    Photo(File photoFile) throws IOException, ImageProcessingException, NotImageFileException {
-        this.photoFile = photoFile;
-        init();
-    }
+  static {
+    paramFileExtToFolderNameMap = new HashMap<>();
+    paramFileExtToFolderNameMap.put("nksc", "NKSC_PARAM");
+    patternPhotoFile = Pattern.compile("(.+)(\\.(.+))");
+  }
 
-    boolean rename(boolean dryRun, SimpleDateFormat sdf) {
+  Photo(File photoFile)
+      throws IOException,
+      ImageProcessingException,
+      NotImageFileException
+  {
+    this.photoFile = photoFile;
+    init();
+  }
 
-        return  check(photoFile, patternPhotoFile, sdf) && (null == paramsFile || check(paramsFile, patternParamsFile, sdf)) &&
-                    rename(photoFile, patternPhotoFile, dryRun, sdf) && (null == paramsFile || rename(paramsFile, patternParamsFile, dryRun, sdf));
-    }
+  boolean rename(boolean dryRun, SimpleDateFormat sdf) {
+    return  check(photoFile, patternPhotoFile, sdf)
+      && (null == paramFile || check(paramFile, patternParamsFile, sdf))
+      && process(photoFile, patternPhotoFile, dryRun, sdf)
+      && (null == paramFile || process(paramFile, patternParamsFile, dryRun, sdf));
+  }
 
-    private void init() throws IOException, ImageProcessingException, NotImageFileException {
-        Matcher matcherPhoto = patternPhotoFile.matcher(photoFile.getName());
-        if (matcherPhoto.find()) {
-            String photoFileExt = matcherPhoto.group(3);
-            if (paramFileExtToFolderNameMap.containsKey(photoFileExt.toLowerCase())) {
-                throw new NotImageFileException("recognized as a settings file.");
-            }
-            for (String paramFileExt : paramFileExtToFolderNameMap.keySet()) {
-                File paramFileFolder = new File(photoFile.getParent() + File.separator + paramFileExtToFolderNameMap.get(paramFileExt));
-                if (paramFileFolder.exists()) {
-                    File[] paramsFileFolderFiles = paramFileFolder.listFiles();
-                    if (null == paramsFileFolderFiles) {
-                        throw new IOException(String.format("Directory %s returned null at getting list of its files.", paramFileFolder.getName()));
-                    } else {
-                        Pattern _patternParamsFile = Pattern.compile(String.format("(.+?)((\\.(%s))?\\.(%s|%s))", photoFileExt, paramFileExt, paramFileExt.toUpperCase()));
-                        for (File _paramsFile : paramsFileFolderFiles) {
-                            Matcher matcherParams = _patternParamsFile.matcher(_paramsFile.getName());
-                            if (matcherParams.matches()) {
-                                if (matcherParams.group(1).equals(matcherPhoto.group(1))) {
-                                    paramsFile = _paramsFile;
-                                    patternParamsFile = _patternParamsFile;
-                                    break;
-                                }
-                            }
-                        }
-                        if (paramsFile != null) {
-                            break;
-                        }
-                    }
+  private void init() throws IOException, ImageProcessingException, NotImageFileException {
+    Matcher matcherPhoto = patternPhotoFile.matcher(photoFile.getName());
+    if (matcherPhoto.find()) {
+      String photoFileExt = matcherPhoto.group(3);
+      if (paramFileExtToFolderNameMap.containsKey(photoFileExt.toLowerCase())) {
+        throw new NotImageFileException("recognized as a settings file.");
+      }
+      for (String paramFileExt : paramFileExtToFolderNameMap.keySet()) {
+        File paramFileFolder = new File(photoFile.getParent()
+            + File.separator + paramFileExtToFolderNameMap.get(paramFileExt));
+        if (paramFileFolder.exists()) {
+          File[] paramFileFolderFiles = paramFileFolder.listFiles();
+          if (null == paramFileFolderFiles) {
+            throw new IOException(String.format("Directory %s returned null at getting list of its files.",
+                    paramFileFolder.getName()));
+          } else {
+            Pattern paramsFilePattern = Pattern.compile(String.format("(.+?)((\\.(%s))?\\.(%s|%s))",
+                photoFileExt,
+                paramFileExt,
+                paramFileExt.toUpperCase()));
+            for (File paramFileFolderFile : paramFileFolderFiles) {
+              Matcher matcherParams = paramsFilePattern.matcher(paramFileFolderFile.getName());
+              if (matcherParams.matches()) {
+                if (matcherParams.group(1).equals(matcherPhoto.group(1))) {
+                  paramFile = paramFileFolderFile;
+                  patternParamsFile = paramsFilePattern;
+                  break;
                 }
+              }
             }
+            if (paramFile != null) {
+              break;
+            }
+          }
         }
-        dateTaken = PhotoUtilities.getDateTaken(photoFile);
+      }
     }
+    dateTaken = PhotoUtilities.getDateTaken(photoFile);
+  }
 
-    private boolean check(File file, Pattern pattern, SimpleDateFormat sdf) {
-        Matcher matcher = pattern.matcher(file.getName());
-        if (matcher.matches()) {
-            File newFile = new File(file.getParent() + File.separator + sdf.format(dateTaken) + matcher.group(2));
-            int count = 0;
-            while (newFile.exists()) {
-                if (file.getName().equals(newFile.getName())) {
-                    System.out.println(String.format("File [%s] already has properly name.", file.getAbsoluteFile()));
-                    return false;
-                }
-                count++;
-                newFile = new File(file.getParent() + File.separator + sdf.format(dateTaken) + String.format("_%s", count) + matcher.group(2));
-            }
-            if (! file.canWrite() || ! newFile.getParentFile().canWrite()) {
-                System.err.println(String.format("Access problems. File [%s] can not be renamed.", file.getAbsoluteFile()));
-                return false;
-            }
-            return true;
+  private boolean check(File file, Pattern pattern, SimpleDateFormat sdf) {
+    Matcher matcher = pattern.matcher(file.getName());
+    if (matcher.matches()) {
+      File newFile = new File(file.getParent()
+          + File.separator
+          + sdf.format(dateTaken)
+          + matcher.group(2));
+      int count = 0;
+      while (newFile.exists()) {
+        if (file.getName().equals(newFile.getName())) {
+          System.out.println(String.format("File [%s] already has properly name.",
+              file.getAbsoluteFile()));
+          return false;
         }
+        count++;
+        newFile = new File(file.getParent()
+            + File.separator
+            + sdf.format(dateTaken)
+            + String.format("_%s", count)
+            + matcher.group(2));
+      }
+      if (! file.canWrite() || ! newFile.getParentFile().canWrite()) {
+        System.err.println(String.format(
+            "Access problems. File [%s] can not be renamed.",
+            file.getAbsoluteFile()));
         return false;
+      }
+      return true;
     }
+    return false;
+  }
 
-    private boolean rename(File file, Pattern pattern, boolean dryRun, SimpleDateFormat sdf) {
-        Matcher matcher = pattern.matcher(file.getName());
-        if (matcher.matches()) {
-            File newFile = new File(file.getParent() + File.separator + sdf.format(dateTaken) + matcher.group(2));
-            int count = 0;
-            while (newFile.exists()) {
-                count++;
-                newFile = new File(file.getParent() + File.separator + sdf.format(dateTaken) + String.format("_%s", count) + matcher.group(2));
-            }
-            if (! dryRun) {
-                if (! file.renameTo(newFile)) {
-                    System.err.println(String.format("%s -X-> %s", file.getAbsoluteFile(), newFile.getName()));
-                    return false;
-                }
-            }
-            System.out.println(String.format("%s --> %s", file.getAbsoluteFile(), newFile.getName()));
+  private boolean process(File file,
+      Pattern pattern,
+      boolean dryRun,
+      SimpleDateFormat sdf)
+  {
+    Matcher matcher = pattern.matcher(file.getName());
+    if (matcher.matches()) {
+      File newFile = new File(file.getParent()
+          + File.separator
+          + sdf.format(dateTaken)
+          + matcher.group(2));
+      int count = 0;
+      while (newFile.exists()) {
+        count++;
+        newFile = new File(file.getParent()
+            + File.separator
+            + sdf.format(dateTaken)
+            + String.format("_%s", count)
+            + matcher.group(2));
+      }
+      if (! dryRun) {
+        if (! file.renameTo(newFile)) {
+          System.err.println(String.format("%s -X-> %s",
+              file.getAbsoluteFile(),
+              newFile.getName()));
+          return false;
         }
-        return true;
+      }
+      System.out.println(String.format("%s --> %s",
+          file.getAbsoluteFile(), newFile.getName()));
     }
+    return true;
+  }
 
-    @Override
-    public String toString() {
-        return "Photo " + photoFile.getAbsolutePath() +
-                (null == paramsFile ? "" : String.format(" (%s)", paramsFile.getAbsolutePath()));
-    }
+  @Override
+  public String toString() {
+    return "Photo " + photoFile.getAbsolutePath()
+        + (null == paramFile ? "" : String.format(" (%s)",
+        paramFile.getAbsolutePath()));
+  }
 }

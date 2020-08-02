@@ -1,7 +1,9 @@
+package name.svistun.photo;
+
 /*
  * MIT License
  *
- * Copyright (c) 2017 Svistunov Aleksey
+ * Copyright (c) 2017 Aleksey Svistunov
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,31 +24,30 @@
  * SOFTWARE.
  */
 
-package name.svistun.photo;
+import java.io.File;
+import java.io.IOException;
+import java.util.Date;
 
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Date;
-
-class PhotoUtilities {
-    static Date getDateTaken(File file) throws IOException, ImageProcessingException {
-        Date dateTaken = null;
-        Metadata metadata = ImageMetadataReader.readMetadata(file);
-        // obtain the Exif SubIFD directory
-        for (ExifSubIFDDirectory directory : metadata.getDirectoriesOfType(ExifSubIFDDirectory.class)) {
-            dateTaken = directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
-            if (dateTaken != null) {
-                break;
-            }
-        }
-        if (null == dateTaken) {
-            throw new ImageProcessingException("could not find date taken in EXIF");
-        }
-        return dateTaken;
+final class PhotoUtilities {
+  private PhotoUtilities() {}
+  static Date getDateTaken(File file) throws IOException, ImageProcessingException {
+    Date dateTaken = null;
+    Metadata metadata = ImageMetadataReader.readMetadata(file);
+    // obtain the Exif SubIFD directory
+    for (ExifSubIFDDirectory directory : metadata.getDirectoriesOfType(ExifSubIFDDirectory.class)) {
+      dateTaken = directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
+      if (dateTaken != null) {
+        break;
+      }
     }
+    if (null == dateTaken) {
+      throw new ImageProcessingException("could not find date taken in EXIF");
+    }
+    return dateTaken;
+  }
 }

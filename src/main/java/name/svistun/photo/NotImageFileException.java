@@ -1,7 +1,9 @@
+package name.svistun.photo;
+
 /*
  * MIT License
  *
- * Copyright (c) 2017 Svistunov Aleksey
+ * Copyright (c) 2017 Aleksey Svistunov
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,10 +24,8 @@
  * SOFTWARE.
  */
 
-package name.svistun.photo;
-
 class NotImageFileException extends Exception {
-    NotImageFileException(String msg) {
-        super(msg);
-    }
+  NotImageFileException(String msg) {
+    super(msg);
+  }
 }
