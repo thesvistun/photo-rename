@@ -51,7 +51,7 @@ public final class Main {
   private static final int CLI_LINE_LENGTH = 83;
 
   static {
-    dateFormat = "yyyyMMdd'at'HHmm''ss";
+    dateFormat = "yyyyMMdd'T'HHmmss";
   }
 
   private Main() {}
