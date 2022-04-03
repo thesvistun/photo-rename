@@ -1,4 +1,4 @@
-package name.svistun.photo;
+package name.svistun.picture;
 
 /*
  * MIT License
@@ -24,8 +24,8 @@ package name.svistun.photo;
  * SOFTWARE.
  */
 
-class NotImageFileException extends Exception {
-  NotImageFileException(String msg) {
+public class NotImageFileException extends Exception {
+  public NotImageFileException(String msg) {
     super(msg);
   }
 }

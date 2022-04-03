@@ -1,13 +1,17 @@
-1. A program have to rename files of photos found in a pointed by user folder to theirs (photos) 'date taken'.
+1. A program have to be able to change a name of pictures with a new one based on 'date taken' data.
 
-2. User must be able to set new file name date/time pattern.
+2. User must be able to set date/time pattern to rename files to.
 
-3. The program renames file found recursively in all found inner directories.
+3. User have to be able to set one or more paths to look for pictures
 
-4. User must be able to set max depth for scanning of inner directories.
+4. The program must be able to look for files recursively.
 
-5. The program renames NEF parameters file as well.
+5. User must be able to set max directory depth for scanning.
 
-6. The program supports dry run.
+6. The program have to be able to rename picture files along with their parameters files as well. Like NEF + nksc.
 
-7. The program outputs information about its work.
+7. The program have to support dry run.
+
+8. The program must output information about its work.
+
+9. The picture files means both photos and videos.

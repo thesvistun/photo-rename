@@ -1,9 +1,9 @@
-package name.svistun.photo;
+package name.svistun.picture;
 
 /*
  * MIT License
  *
- * Copyright (c) 2017 Aleksey Svistunov
+ * Copyright (c) 2022 Aleksey Svistunov
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,30 +24,32 @@ package name.svistun.photo;
  * SOFTWARE.
  */
 
+import name.svistun.picture.type.Exif;
+import name.svistun.picture.type.Mov;
+
 import java.io.File;
 import java.io.IOException;
-import java.util.Date;
+import java.util.Arrays;
+import java.util.List;
 
-import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
-import com.drew.metadata.Metadata;
-import com.drew.metadata.exif.ExifSubIFDDirectory;
 
-final class PhotoUtilities {
-  private PhotoUtilities() {}
-  static Date getDateTaken(File file) throws IOException, ImageProcessingException {
-    Date dateTaken = null;
-    Metadata metadata = ImageMetadataReader.readMetadata(file);
-    // obtain the Exif SubIFD directory
-    for (ExifSubIFDDirectory directory : metadata.getDirectoriesOfType(ExifSubIFDDirectory.class)) {
-      dateTaken = directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
-      if (dateTaken != null) {
-        break;
-      }
+public final class PictureFactory {
+  public static final List<String> EXIF_EXTS = Arrays.asList("nef", "jpg");
+  public static final List<String> MOV_EXTS = Arrays.asList("mov");
+  
+  private PictureFactory() {}
+  
+  public static Picture getPicture(File pictureFile) throws IOException,
+      ImageProcessingException, NotImageFileException
+  {
+    String pictureFileName = pictureFile.getName();
+    String pictureFileExt = pictureFileName.substring(pictureFileName.lastIndexOf('.') + 1).toLowerCase();
+    if (EXIF_EXTS.contains(pictureFileExt)) {
+      return new Exif(pictureFile);
+    } else if (MOV_EXTS.contains(pictureFileExt)) {
+      return new Mov(pictureFile);
     }
-    if (null == dateTaken) {
-      throw new ImageProcessingException("could not find date taken in EXIF");
-    }
-    return dateTaken;
+    return null;
   }
 }
