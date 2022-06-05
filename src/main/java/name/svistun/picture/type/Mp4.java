@@ -1,4 +1,4 @@
-package name.svistun.picture;
+package name.svistun.picture.type;
 
 /*
  * MIT License
@@ -23,37 +23,40 @@ package name.svistun.picture;
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-
-import name.svistun.picture.type.Exif;
-import name.svistun.picture.type.Mov;
-import name.svistun.picture.type.Mp4;
+import name.svistun.picture.Picture;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
+import java.util.Date;
 
+import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
+import com.drew.metadata.Metadata;
+import com.drew.metadata.mp4.Mp4Directory;
 
-public final class PictureFactory {
-  public static final List<String> EXIF_EXTS = Arrays.asList("nef", "jpg");
-  public static final List<String> MOV_EXTS = Arrays.asList("mov");
-  public static final List<String> MP4_EXTS = Arrays.asList("mp4");
+public final class Mp4 extends Picture {
   
-  private PictureFactory() {}
-  
-  public static Picture getPicture(File pictureFile) throws IOException,
-      ImageProcessingException, NotImageFileException
-  {
-    String pictureFileName = pictureFile.getName();
-    String pictureFileExt = pictureFileName.substring(pictureFileName.lastIndexOf('.') + 1).toLowerCase();
-    if (EXIF_EXTS.contains(pictureFileExt)) {
-      return new Exif(pictureFile);
-    } else if (MOV_EXTS.contains(pictureFileExt)) {
-      return new Mov(pictureFile);
-    } else if (MP4_EXTS.contains(pictureFileExt)) {
-      return new Mp4(pictureFile);
-    }
-    return null;
+  public Mp4(File videoFile) throws ImageProcessingException, IOException {
+    super(videoFile);
+    initDateTaken();
   }
+
+  @Override
+  protected void initDateTaken() throws ImageProcessingException, IOException {
+    Date dateTaken = null;
+    Metadata metadata = ImageMetadataReader.readMetadata(getPictureFile());
+    // obtain the QuickTime directory
+    for (Mp4Directory directory : metadata.getDirectoriesOfType(Mp4Directory.class)) {
+      dateTaken = directory.getDate(Mp4Directory.TAG_CREATION_TIME);
+      if (dateTaken != null) {
+        break;
+      }
+    }
+    if (null == dateTaken) {
+      throw new ImageProcessingException("could not find date taken in metadate");
+    }
+    setDateTaken(dateTaken);
+  }
+  
+  
 }
